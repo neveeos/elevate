@@ -58,7 +58,7 @@ img { max-width: 100%; }
 .top { background: var(--ink); color: var(--white); }
 .top-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 84px; }
 .logo { display: block; }
-.logo img { display: block; width: 150px; height: auto; }
+.logo img { display: block; width: 138px; height: auto; }
 .top nav { display: flex; align-items: center; gap: 28px; font-size: 15px; font-weight: 700; }
 .top nav a { text-decoration: none; color: #d6dee2; }
 .top nav a:hover { color: var(--white); }
