@@ -1,6 +1,6 @@
 # KHS Elevate
 
-The website of KHS Elevate, the digital and tech department of Kulsoom Hassan School, at https://elevate.kulsoomhassanschool.com.
+The website of KHS Elevate, professional courses by Kulsoom Hassan School, at https://elevate.kulsoomhassanschool.com.
 
 This repository is only the front end: plain HTML, CSS and JavaScript with no build step. Everything else lives in the Kulsoom Hassan School system (`neveeos/khs`):
 
