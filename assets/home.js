@@ -1,4 +1,5 @@
 import { loadCatalog, nextBatch, courseFee, pkr, formatDate, esc, whatsapp, year } from './common.js';
+import { contentFor, coursePath } from './course-content.js';
 
 year();
 for (const a of document.querySelectorAll('[data-whatsapp]')) {
@@ -12,14 +13,15 @@ const list = document.getElementById('course-list');
 function card(course, batch, teachers) {
   const fee = courseFee(course, batch);
   const teacher = teachers.find((t) => t.id === batch?.instructor_id);
-  const href = '/course?id=' + encodeURIComponent(course.id);
+  const content = contentFor(course.id);
+  const href = coursePath(course);
   const open = batch?.open_for_registration;
   return `
     <article class="course">
       <div class="course-main">
         <span class="course-tag">${esc(course.category)}${course.level ? ' · ' + esc(course.level) : ''}</span>
-        <h3>${esc(course.title)}</h3>
-        ${course.subtitle ? `<p class="subtitle">${esc(course.subtitle)}</p>` : ''}
+        <h3>${esc(content?.title || course.title)}</h3>
+        ${content?.tagline || course.subtitle ? `<p class="subtitle">${esc(content?.tagline || course.subtitle)}</p>` : ''}
         <p class="description">${esc(course.description)}</p>
       </div>
       <div class="course-side">
@@ -31,7 +33,7 @@ function card(course, batch, teachers) {
           ${teacher ? `<div><dt>Teacher</dt><dd>${esc(teacher.name)}</dd></div>` : ''}
           ${course.instalments_max > 1 ? `<div><dt>Payment</dt><dd>Up to ${course.instalments_max} instalments</dd></div>` : ''}
         </dl>
-        <a class="button" href="${href}${open ? '#register' : ''}">${open ? 'Register' : 'Course details'}</a>
+        <a class="button" href="${href}">${open ? 'View course and register' : 'Course details'}</a>
         ${!open && !course.coming_soon ? '<p class="note">Registration opens soon for the next intake.</p>' : ''}
       </div>
     </article>`;

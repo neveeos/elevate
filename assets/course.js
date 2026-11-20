@@ -1,4 +1,5 @@
 import { API, loadCatalog, courseFee, instalmentSplit, pkr, formatDate, esc, whatsapp, year } from './common.js';
+import { contentFor, courseIdForSlug, coursePath } from './course-content.js';
 
 year();
 function wireWhatsapp(root = document) {
@@ -10,7 +11,9 @@ function wireWhatsapp(root = document) {
 }
 wireWhatsapp();
 
-const id = new URLSearchParams(location.search).get('id') || '';
+// /courses/<slug> (readable address) or /course?id=<id>.
+const slugMatch = location.pathname.match(/^\/courses\/([a-z0-9-]+)\/?$/);
+const id = (slugMatch ? courseIdForSlug(slugMatch[1]) : new URLSearchParams(location.search).get('id')) || '';
 const head = document.getElementById('course-head');
 const body = document.getElementById('course-body');
 const summary = document.getElementById('course-summary');
@@ -35,36 +38,51 @@ function render({ courses, batches, teachers, accounts, terms }) {
   const teacher = teachers.find((t) => t.id === first?.instructor_id);
   const fee = courseFee(course, first);
 
-  document.title = `${course.title} | KHS Elevate`;
-  document.querySelector('meta[name="description"]').content = (course.subtitle || course.description || '').slice(0, 160);
+  const content = contentFor(course.id);
+  const title = content?.title || course.title;
+  const tagline = content?.tagline || course.subtitle || '';
+  document.title = `${title} | KHS Elevate`;
+  document.querySelector('meta[name="description"]').content = (tagline || course.description || '').slice(0, 160);
+  if (content && !slugMatch) history.replaceState(null, '', coursePath(course) + location.hash);
+  const canonical = document.querySelector('link[rel="canonical"]');
+  if (canonical) canonical.href = location.origin + coursePath(course);
 
-  head.innerHTML = `
-    <h1>${esc(course.title)}</h1>
-    ${course.subtitle ? `<p class="subtitle">${esc(course.subtitle)}</p>` : ''}`;
+  const registerCta = open.length
+    ? '<a class="button" href="#register">Register now</a>'
+    : `<a class="button" href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, please tell me when registration opens for ${esc(title)}.">Ask about the next intake</a>`;
+  const outlineLink = (cls) => content?.outline ? `<a class="button ${cls}" href="${esc(content.outline.href)}" download>Download course outline</a>` : '';
+  const feeText = course.coming_soon ? 'Coming soon' : fee ? pkr(fee) : 'Fee to be announced';
 
-  const outcomes = lines(course.outcomes);
-  const reqs = lines(course.entry_requirements);
-  body.innerHTML = `
-    <h2>About the course</h2>
-    ${lines(course.description).map((p) => `<p>${esc(p)}</p>`).join('')}
-    ${outcomes.length ? `<h2>What you will be able to do</h2><ul>${outcomes.map((o) => `<li>${esc(o)}</li>`).join('')}</ul>` : ''}
-    ${reqs.length ? `<h2>Before you join</h2><ul>${reqs.map((o) => `<li>${esc(o)}</li>`).join('')}</ul>` : ''}
-    ${teacher ? `<h2>Your teacher</h2><p><strong>${esc(teacher.name)}</strong>${teacher.specialty ? ` · ${esc(teacher.specialty)}` : ''}</p>${teacher.bio ? `<p class="muted">${esc(teacher.bio)}</p>` : ''}` : ''}
-    <h2>How classes work</h2>
-    <p>Classes are live online on Zoom at the times below (Pakistan time). You need a computer and a stable internet connection. You receive the class link by e-mail once your registration is confirmed.</p>`;
+  head.innerHTML = content ? `
+    <p class="kicker">${esc(content.kicker)}</p>
+    <h1>${esc(title)}</h1>
+    ${tagline ? `<p class="subtitle">${esc(tagline)}</p>` : ''}
+    <dl class="glance">
+      <div><dt>Starts</dt><dd>${first ? formatDate(first.start_date) : 'To be announced'}</dd></div>
+      ${content.glance.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}
+      <div><dt>Fee</dt><dd>${feeText}</dd></div>
+    </dl>
+    <div class="actions">${registerCta}${outlineLink('ghost')}</div>` : `
+    <h1>${esc(title)}</h1>
+    ${tagline ? `<p class="subtitle">${esc(tagline)}</p>` : ''}`;
+  wireWhatsapp(head);
+
+  body.innerHTML = content ? richBody(content, course, first) : plainBody(course, teacher);
 
   summary.innerHTML = `
-    <div class="fee">${course.coming_soon ? 'Coming soon' : fee ? pkr(fee) : 'Fee to be announced'}</div>
+    <div class="fee">${feeText}</div>
     <dl class="facts" style="margin-top:16px">
-      <div><dt>Level</dt><dd>${esc(course.level || '—')}</dd></div>
       <div><dt>Starts</dt><dd>${first ? formatDate(first.start_date) : 'To be announced'}</dd></div>
-      ${first?.schedule ? `<div><dt>Classes</dt><dd>${esc(first.schedule)}</dd></div>` : ''}
+      ${first?.schedule ? `<div><dt>Class days</dt><dd>${esc(first.schedule)}</dd></div>` : ''}
       ${course.duration ? `<div><dt>Length</dt><dd>${esc(course.duration)}</dd></div>` : ''}
       <div><dt>Format</dt><dd>${esc(first?.format || 'Live online')}</dd></div>
+      ${content?.instructor ? `<div><dt>Instructor</dt><dd>${esc(content.instructor.name)}</dd></div>` : ''}
       ${course.instalments_max > 1 ? `<div><dt>Payment</dt><dd>Up to ${course.instalments_max} instalments</dd></div>` : ''}
     </dl>
-    ${open.length ? '<a class="button" href="#register">Register now</a>' : `<a class="button" href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, please tell me when registration opens for ${esc(course.title)}.">Ask about the next intake</a>`}`;
+    ${registerCta}
+    ${content?.outline ? `<a class="outline-link" href="${esc(content.outline.href)}" download>${esc(content.outline.label)}</a>` : ''}`;
   wireWhatsapp(summary);
+  if (content) structuredData(content, course, first, fee);
 
   if (!open.length) {
     area.innerHTML = `<p class="muted">Registration for this course is not open yet.</p><p><a class="button dark" href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, please tell me when registration opens for ${esc(course.title)}.">Ask on WhatsApp</a></p>`;
@@ -72,6 +90,120 @@ function render({ courses, batches, teachers, accounts, terms }) {
     return;
   }
   form(course, open, accounts, terms);
+}
+
+function plainBody(course, teacher) {
+  const outcomes = lines(course.outcomes);
+  const reqs = lines(course.entry_requirements);
+  return `
+    <h2>About the course</h2>
+    ${lines(course.description).map((p) => `<p>${esc(p)}</p>`).join('')}
+    ${outcomes.length ? `<h2>What you will be able to do</h2><ul>${outcomes.map((o) => `<li>${esc(o)}</li>`).join('')}</ul>` : ''}
+    ${reqs.length ? `<h2>Before you join</h2><ul>${reqs.map((o) => `<li>${esc(o)}</li>`).join('')}</ul>` : ''}
+    ${teacher ? `<h2>Your teacher</h2><p><strong>${esc(teacher.name)}</strong>${teacher.specialty ? ` · ${esc(teacher.specialty)}` : ''}</p>${teacher.bio ? `<p class="muted">${esc(teacher.bio)}</p>` : ''}` : ''}
+    <h2>How classes work</h2>
+    <p>Classes are live online on Zoom at the times below (Pakistan time). You need a computer and a stable internet connection. You receive the class link by e-mail once your registration is confirmed.</p>`;
+}
+
+function richBody(c, course, first) {
+  const t = c.instructor;
+  let n = 0;
+  return `
+    <section class="block" aria-labelledby="overview">
+      <h2 id="overview">Overview</h2>
+      ${c.overview.map((p) => `<p>${esc(p)}</p>`).join('')}
+    </section>
+
+    <section class="block" aria-labelledby="who">
+      <h2 id="who">Who it is for</h2>
+      <div class="audience">${c.audience.map(([h, p]) => `<div><strong>${esc(h)}</strong><span>${esc(p)}</span></div>`).join('')}</div>
+    </section>
+
+    <section class="block" aria-labelledby="how">
+      <h2 id="how">How every class runs</h2>
+      <div class="split" role="img" aria-label="Each 90-minute class: 30 minutes of frameworks, 60 minutes of live execution">
+        ${c.split.map(([k, v], i) => `<div class="split-part ${i ? 'do' : 'learn'}"><strong>${esc(k)}</strong><span>${esc(v)}</span></div>`).join('')}
+      </div>
+      <p class="muted small">Classes are live online (Pakistan time). You receive the class link by e-mail once your registration is confirmed.</p>
+    </section>
+
+    <section class="block" aria-labelledby="curriculum">
+      <div class="block-head"><h2 id="curriculum">Curriculum</h2>${c.outline ? `<a class="plain" href="${esc(c.outline.href)}" download>Download the outline (PDF)</a>` : ''}</div>
+      <ol class="weeks">
+        ${c.weeks.map((w, i) => `
+          <li>
+            <details${i === 0 ? ' open' : ''}>
+              <summary><span class="week-no">Week ${i + 1}</span><span class="week-title">${esc(w.title)}</span></summary>
+              <p>${esc(w.summary)}</p>
+              <div class="week-grid">
+                <div><h3>Sessions</h3><ul class="sessions">${w.sessions.map((x) => `<li><span>Session ${++n}</span>${esc(x)}</li>`).join('')}</ul></div>
+                <div><h3>You will produce</h3><ul class="deliverables">${w.deliverables.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>
+              </div>
+            </details>
+          </li>`).join('')}
+      </ol>
+    </section>
+
+    <section class="block" aria-labelledby="leave">
+      <h2 id="leave">What you leave with</h2>
+      <div class="includes">${c.includes.map(([h, p]) => `<div><strong>${esc(h)}</strong><span>${esc(p)}</span></div>`).join('')}</div>
+    </section>
+
+    ${t ? `
+    <section class="block" aria-labelledby="instructor">
+      <h2 id="instructor">Your instructor</h2>
+      <article class="instructor">
+        <div class="monogram" aria-hidden="true">${esc(t.initials)}</div>
+        <div class="instructor-main">
+          <h3>${esc(t.name)}</h3>
+          <p class="headline">${esc(t.headline)}</p>
+          <ul class="roles">${t.roles.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
+          <p>${esc(t.summary)}</p>
+          <dl class="results">${t.results.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+          <details class="more">
+            <summary>Experience and education</summary>
+            ${t.more.map((p) => `<p>${esc(p)}</p>`).join('')}
+            <ul>${t.education.map((e) => `<li>${esc(e)}</li>`).join('')}</ul>
+          </details>
+        </div>
+      </article>
+    </section>` : ''}
+
+    ${c.outline ? `
+    <section class="block download" aria-labelledby="outline-title">
+      <div>
+        <h2 id="outline-title">Take the outline with you</h2>
+        <p>The week-by-week curriculum and deliverables on two pages, to read later or share with your manager.</p>
+      </div>
+      <a class="button dark" href="${esc(c.outline.href)}" download>Download PDF</a>
+    </section>` : ''}
+
+    ${c.faq?.length ? `
+    <section class="block faq" aria-labelledby="course-faq">
+      <h2 id="course-faq">Questions</h2>
+      ${c.faq.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}
+    </section>` : ''}`;
+}
+
+// Course details for search engines (schema.org Course), as top universities publish.
+function structuredData(c, course, first, fee) {
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'Course',
+    name: c.title,
+    description: c.tagline,
+    url: location.origin + coursePath(course),
+    provider: { '@type': 'EducationalOrganization', name: 'KHS Elevate, Kulsoom Hassan School', sameAs: 'https://www.kulsoomhassanschool.com' },
+    ...(fee ? { offers: { '@type': 'Offer', price: fee, priceCurrency: 'PKR', category: 'Paid' } } : {}),
+    hasCourseInstance: first ? [{
+      '@type': 'CourseInstance', courseMode: 'Online', startDate: first.start_date, ...(first.end_date ? { endDate: first.end_date } : {}),
+      ...(c.instructor ? { instructor: { '@type': 'Person', name: c.instructor.name } } : {}),
+    }] : undefined,
+  };
+  const el = document.createElement('script');
+  el.type = 'application/ld+json';
+  el.textContent = JSON.stringify(data);
+  document.head.appendChild(el);
 }
 
 function form(course, open, accounts, terms) {
