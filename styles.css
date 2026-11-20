@@ -303,3 +303,20 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(253, 201, 38
   .results { grid-template-columns: 1fr; }
   .download { flex-direction: column; align-items: stretch; }
 }
+
+/* WhatsApp and call buttons */
+.contact-dock { position: fixed; right: 20px; bottom: 20px; z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.contact-dock a { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 54px; min-width: 54px; padding: 0 18px; border-radius: 999px; font-size: 15px; font-weight: 700; text-decoration: none; box-shadow: 0 10px 24px -10px rgba(0,0,0,.45); }
+.contact-dock svg { width: 24px; height: 24px; flex-shrink: 0; }
+.contact-dock .dock-wa { background: #1f8f4e; color: #fff; }
+.contact-dock .dock-call { width: 54px; padding: 0; background: var(--ink); color: var(--yellow); }
+.contact-dock .dock-call span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.contact-dock a:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
+@media (max-width: 760px) {
+  .foot { padding-bottom: 84px; }
+  .contact-dock { left: 0; right: 0; bottom: 0; flex-direction: row; gap: 1px; padding-bottom: env(safe-area-inset-bottom); background: var(--line); box-shadow: 0 -6px 20px -12px rgba(0,0,0,.3); }
+  .contact-dock a { flex: 1; height: 58px; padding: 0 6px; border-radius: 0; box-shadow: none; font-size: 14.5px; }
+  .contact-dock svg { width: 20px; height: 20px; }
+  .contact-dock .dock-call { width: auto; }
+  .contact-dock .dock-call span { position: static; width: auto; height: auto; clip: auto; }
+}

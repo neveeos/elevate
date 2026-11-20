@@ -42,6 +42,8 @@ function render({ courses, batches, teachers, accounts, terms }) {
   const title = content?.title || course.title;
   const tagline = content?.tagline || course.subtitle || '';
   document.title = `${title} | KHS Elevate`;
+  const dock = document.getElementById('dock-wa');
+  if (dock) dock.href = whatsapp(`Assalam o Alaikum KHS Elevate, I would like to ask about the ${title} course.`);
   document.querySelector('meta[name="description"]').content = (tagline || course.description || '').slice(0, 160);
   if (content && !slugMatch) history.replaceState(null, '', coursePath(course) + location.hash);
   const canonical = document.querySelector('link[rel="canonical"]');
