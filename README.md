@@ -20,3 +20,19 @@ The KHS backend accepts these requests only from `https://elevate.kulsoomhassans
 Import the repository into Vercel with the framework preset **Other**, leave the build command empty, and add the domain `elevate.kulsoomhassanschool.com`. `vercel.json` sets clean URLs and security headers.
 
 Brand: the KHS Elevate logo (`assets/elevate-logo.png`), yellow `#fdc926`, slate `#1c2429`, and the Manrope typeface (SIL Open Font License, `fonts/Manrope-OFL.txt`).
+
+## Analytics (Google Tag Manager GTM-MC9DW2QK)
+
+The container loads from `/assets/gtm.js` (no inline script, so the CSP stays strict). Set up GA4 and the Meta pixel inside the container with their **built-in templates** (Google tag; Meta Pixel template). Custom HTML tags with inline scripts are blocked by the site's security policy.
+
+Events the site pushes to `dataLayer`:
+
+| Event | When | Fields |
+| --- | --- | --- |
+| `view_course` | A course page loads | `course_id`, `course_name`, `value`, `currency` |
+| `download_outline` | Course outline PDF clicked | `course_id`, `course_name` |
+| `begin_registration` | First input in the registration form | `course_id`, `course_name` |
+| `complete_registration` | Registration accepted | `event_id`, `course_id`, `course_name`, `value`, `currency` |
+| `contact` | WhatsApp or phone link tapped | `method` |
+
+Map `complete_registration` to the Meta **CompleteRegistration** event and pass `event_id` as the Event ID: the school's server sends the same event (Conversions API) with the same ID, so Meta counts it once.

@@ -1,4 +1,4 @@
-import { API, loadCatalog, courseFee, instalmentSplit, pkr, formatDate, esc, whatsapp, year } from './common.js';
+import { API, loadCatalog, courseFee, instalmentSplit, pkr, formatDate, esc, whatsapp, year, track, attribution } from './common.js';
 import { contentFor, courseIdForSlug, coursePath } from './course-content.js';
 
 year();
@@ -83,6 +83,11 @@ function render({ courses, batches, teachers, accounts, terms }) {
     ${content?.outline ? `<a class="outline-link" href="${esc(content.outline.href)}" download>${esc(content.outline.label)}</a>` : ''}`;
   wireWhatsapp(summary);
   if (content) structuredData(content, course, first, fee);
+  track('view_course', { course_id: course.id, course_name: title, value: fee || undefined, currency: 'PKR' });
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[download]');
+    if (a) track('download_outline', { course_id: course.id, course_name: title });
+  });
 
   if (!open.length) {
     area.innerHTML = `<p class="muted">Registration for this course is not open yet.</p><p><a class="button dark" href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, please tell me when registration opens for ${esc(course.title)}.">Ask on WhatsApp</a></p>`;
@@ -328,6 +333,7 @@ function form(course, open, accounts, terms) {
     }
   });
 
+  f.addEventListener('input', () => track('begin_registration', { course_id: course.id, course_name: course.title }), { once: true });
   f.addEventListener('submit', async (e) => {
     e.preventDefault();
     const status = document.getElementById('status');
@@ -362,6 +368,8 @@ function form(course, open, accounts, terms) {
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || 'Your registration could not be sent. Keep your receipt and try again, or contact us on WhatsApp.');
       const ref = String(data.reference || requestId).slice(0, 8).toUpperCase();
+      // event_id matches the server-side Meta event, so Meta counts the registration once.
+      track('complete_registration', { event_id: 'registration:' + data.reference, course_id: course.id, course_name: course.title, value: t, currency: 'PKR' });
       area.innerHTML = `<div class="done" role="status">
         <h3>Registration received</h3>
         <p>Thank you. Your reference is <strong>${esc(ref)}</strong>. We have e-mailed a copy to ${esc(payload.email)}.</p>
@@ -412,14 +420,6 @@ async function receiptData(file) {
   }
 }
 
-/** Where the visitor came from (UTM tags and ad clicks), for the school's reports. */
-function attribution() {
-  const q = new URLSearchParams(location.search);
-  const out = { landing_page: location.href.slice(0, 500), referrer: document.referrer.slice(0, 500) };
-  for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid']) if (q.get(k)) out[k] = q.get(k).slice(0, 200);
-  if (!out.utm_source) out.utm_source = 'elevate';
-  return out;
-}
 
 loadCatalog().then(render).catch(() => {
   head.innerHTML = '<h1>The course could not be loaded.</h1><p class="subtitle">Please refresh the page, or contact us on WhatsApp.</p>';

@@ -54,3 +54,41 @@ export function nextBatch(course, batches) {
 export function year() {
   for (const el of document.querySelectorAll('[data-year]')) el.textContent = String(new Date().getFullYear());
 }
+
+/** Send an event to Google Tag Manager (GA4 and the Meta pixel are configured there). */
+export function track(event, params = {}) {
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({ event, ...params });
+}
+
+// Remember where the visitor first came from (ad tags and click IDs) for this visit,
+// so a registration made a few pages later is still credited to the ad.
+const ATTR_KEY = 'elevate_attribution';
+const ATTR_PARAMS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid'];
+try {
+  const q = new URLSearchParams(location.search);
+  if (ATTR_PARAMS.some((k) => q.get(k)) && !sessionStorage.getItem(ATTR_KEY)) {
+    const first = { landing_page: location.href.slice(0, 500), referrer: document.referrer.slice(0, 500) };
+    for (const k of ATTR_PARAMS) if (q.get(k)) first[k] = q.get(k).slice(0, 200);
+    sessionStorage.setItem(ATTR_KEY, JSON.stringify(first));
+  }
+} catch { /* storage unavailable */ }
+
+/** UTM tags, landing page and Meta browser IDs, sent with a registration. */
+export function attribution() {
+  let out = {};
+  try { out = JSON.parse(sessionStorage.getItem(ATTR_KEY) || '{}'); } catch { out = {}; }
+  if (!out.landing_page) out = { landing_page: location.href.slice(0, 500), referrer: document.referrer.slice(0, 500) };
+  const cookies = Object.fromEntries(document.cookie.split('; ').filter(Boolean).map((c) => [c.split('=')[0], decodeURIComponent(c.split('=').slice(1).join('='))]));
+  if (cookies._fbp) out.fbp = cookies._fbp;
+  if (cookies._fbc) out.fbc = cookies._fbc;
+  else if (out.fbclid) out.fbc = `fb.1.${Date.now()}.${out.fbclid}`;
+  if (!out.utm_source) out.utm_source = 'elevate';
+  return out;
+}
+
+// WhatsApp and phone taps, for GA4 and the Meta pixel (as a Contact).
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href^="https://wa.me"], a[href^="tel:"]');
+  if (a) track('contact', { method: a.href.startsWith('tel:') ? 'phone' : 'whatsapp' });
+});
