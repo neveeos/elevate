@@ -53,7 +53,7 @@
   "rewrites": [
     {
       "source": "/courses/:slug",
-      "destination": "/course.html"
+      "destination": "/course"
     }
   ]
 }
