@@ -23,7 +23,7 @@ Brand: the KHS Elevate logo (`assets/elevate-logo.png`), yellow `#fdc926`, slate
 
 ## Analytics (Google Tag Manager GTM-MC9DW2QK)
 
-The container loads from `/assets/gtm.js` (no inline script, so the CSP stays strict). Set up GA4 and the Meta pixel inside the container with their **built-in templates** (Google tag; Meta Pixel template). Custom HTML tags with inline scripts are blocked by the site's security policy.
+The container loads from `/assets/gtm.js` (no inline script, so the CSP stays strict). GA4 is set up inside the container. The **Meta pixel (dataset 2222257061654747) is installed directly** from `/assets/meta-pixel.js`: do not add a second Meta pixel tag in GTM, or every event is counted twice. Custom HTML tags with inline scripts are blocked by the site's security policy.
 
 Events the site pushes to `dataLayer`:
 
@@ -35,4 +35,4 @@ Events the site pushes to `dataLayer`:
 | `complete_registration` | Registration accepted | `event_id`, `course_id`, `course_name`, `value`, `currency` |
 | `contact` | WhatsApp or phone link tapped | `method` |
 
-Map `complete_registration` to the Meta **CompleteRegistration** event and pass `event_id` as the Event ID: the school's server sends the same event (Conversions API) with the same ID, so Meta counts it once.
+The site sends these Meta events itself: PageView, ViewContent (`view_course`), InitiateCheckout (`begin_registration`), CompleteRegistration (`complete_registration`, with `event_id` as the Event ID so it deduplicates against the school server's Conversions API event) and Contact (`contact`).

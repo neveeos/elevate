@@ -333,7 +333,7 @@ function form(course, open, accounts, terms) {
     }
   });
 
-  f.addEventListener('input', () => track('begin_registration', { course_id: course.id, course_name: course.title }), { once: true });
+  f.addEventListener('input', () => track('begin_registration', { course_id: course.id, course_name: course.title, value: courseFee(course, open[0]) || undefined, currency: 'PKR' }), { once: true });
   f.addEventListener('submit', async (e) => {
     e.preventDefault();
     const status = document.getElementById('status');

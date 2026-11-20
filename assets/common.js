@@ -59,6 +59,19 @@ export function year() {
 export function track(event, params = {}) {
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({ event, ...params });
+  metaEvent(event, params);
+}
+
+// The same moments as standard Meta events, with value and currency where there is a price.
+const META_EVENTS = { view_course: 'ViewContent', begin_registration: 'InitiateCheckout', complete_registration: 'CompleteRegistration', contact: 'Contact' };
+function metaEvent(event, p) {
+  const name = META_EVENTS[event];
+  if (!name || typeof window.fbq !== 'function') return;
+  const data = { content_type: 'product' };
+  if (p.course_id) data.content_ids = [p.course_id];
+  if (p.course_name) data.content_name = p.course_name;
+  if (p.value > 0) { data.value = Number(p.value); data.currency = p.currency || 'PKR'; }
+  try { window.fbq('track', name, data, p.event_id ? { eventID: p.event_id } : undefined); } catch { /* never block the page */ }
 }
 
 // Remember where the visitor first came from (ad tags and click IDs) for this visit,
