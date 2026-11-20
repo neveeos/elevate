@@ -21,7 +21,7 @@ Import the repository into Vercel with the framework preset **Other**, leave the
 
 Brand: the KHS Elevate logo (`assets/elevate-logo.png`), yellow `#fdc926`, slate `#1c2429`, and the Manrope typeface (SIL Open Font License, `fonts/Manrope-OFL.txt`).
 
-## Analytics (Google Tag Manager GTM-MC9DW2QK)
+## Analytics (Google Tag Manager GTM-5BZHJ8Q3)
 
 The container loads from `/assets/gtm.js` (no inline script, so the CSP stays strict). GA4 is set up inside the container. The **Meta pixel (dataset 2222257061654747) is installed directly** from `/assets/meta-pixel.js`: do not add a second Meta pixel tag in GTM, or every event is counted twice. Custom HTML tags with inline scripts are blocked by the site's security policy.
 
