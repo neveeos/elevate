@@ -156,6 +156,7 @@ img { max-width: 100%; }
 .course-body li::marker { color: var(--maroon); }
 .summary { position: sticky; top: 24px; background: var(--white); border: 1px solid var(--line); border-radius: 18px; padding: 28px; }
 .summary .fee { font-size: 32px; font-weight: 800; color: var(--ink); letter-spacing: -0.02em; }
+.fee-note { display: block; margin: 4px 0 0; font-size: 13px; font-weight: 500; color: var(--muted, #5b6472); }
 .summary .facts dt { color: var(--muted); }
 .summary .facts dd { color: var(--ink); }
 .summary .button { width: 100%; margin-top: 20px; }

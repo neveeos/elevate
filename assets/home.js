@@ -1,4 +1,4 @@
-import { loadCatalog, nextBatch, courseFee, pkr, formatDate, esc, whatsapp, year } from './common.js';
+import { loadCatalog, nextBatch, courseFee, priceText, formatDate, esc, whatsapp, year } from './common.js';
 import { contentFor, coursePath } from './course-content.js';
 
 year();
@@ -25,7 +25,7 @@ function card(course, batch, teachers) {
         <p class="description">${esc(course.description)}</p>
       </div>
       <div class="course-side">
-        <div class="fee">${course.coming_soon ? 'Coming soon' : fee ? pkr(fee) : 'Fee to be announced'}</div>
+        <div class="fee">${priceText(course, fee, content)}</div>
         <dl class="facts">
           <div><dt>Starts</dt><dd>${batch ? formatDate(batch.start_date) : 'To be announced'}</dd></div>
           ${batch?.schedule ? `<div><dt>Classes</dt><dd>${esc(batch.schedule)}</dd></div>` : ''}
