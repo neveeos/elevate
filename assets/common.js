@@ -10,6 +10,16 @@ export const whatsapp = (text) => `https://wa.me/${WHATSAPP}?text=${encodeURICom
 export const pkr = (n) =>
   n == null || n === '' ? '' : 'PKR ' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
 
+export const usd = (n) =>
+  n == null || n === '' ? '' : 'US$' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
+
+/** The price to show: US dollars where the course page sets one, otherwise the PKR fee. */
+export function priceText(course, fee, content) {
+  if (course.coming_soon) return 'Coming soon';
+  if (content?.priceUsd) return usd(content.priceUsd);
+  return fee ? pkr(fee) : 'Fee to be announced';
+}
+
 export function formatDate(iso) {
   if (!iso) return 'To be announced';
   return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(iso + 'T00:00:00Z'));

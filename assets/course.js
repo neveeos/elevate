@@ -1,4 +1,4 @@
-import { API, loadCatalog, courseFee, instalmentSplit, pkr, formatDate, esc, whatsapp, year, track, attribution } from './common.js';
+import { API, loadCatalog, courseFee, instalmentSplit, pkr, usd, priceText, formatDate, esc, whatsapp, year, track, attribution } from './common.js';
 import { contentFor, courseIdForSlug, coursePath } from './course-content.js';
 
 year();
@@ -53,7 +53,9 @@ function render({ courses, batches, teachers, accounts, terms }) {
     ? '<a class="button" href="#register">Register now</a>'
     : `<a class="button" href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, please tell me when registration opens for ${esc(title)}.">Ask about the next intake</a>`;
   const outlineLink = (cls) => content?.outline ? `<a class="button ${cls}" href="${esc(content.outline.href)}" download>Download course outline</a>` : '';
-  const feeText = course.coming_soon ? 'Coming soon' : fee ? pkr(fee) : 'Fee to be announced';
+  const feeText = priceText(course, fee, content);
+  // Payment goes to the school's Pakistani bank account, so say the PKR amount too.
+  const pkrNote = content?.priceUsd && fee && !course.coming_soon ? `${pkr(fee)} by bank transfer in Pakistan` : '';
 
   head.innerHTML = content ? `
     <p class="kicker">${esc(content.kicker)}</p>
@@ -62,7 +64,7 @@ function render({ courses, batches, teachers, accounts, terms }) {
     <dl class="glance">
       <div><dt>Starts</dt><dd>${first ? formatDate(first.start_date) : 'To be announced'}</dd></div>
       ${content.glance.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}
-      <div><dt>Fee</dt><dd>${feeText}</dd></div>
+      <div><dt>Fee</dt><dd>${feeText}${pkrNote ? `<small class="fee-note">${pkrNote}</small>` : ''}</dd></div>
     </dl>
     <div class="actions">${registerCta}${outlineLink('ghost')}</div>` : `
     <h1>${esc(title)}</h1>
@@ -73,6 +75,7 @@ function render({ courses, batches, teachers, accounts, terms }) {
 
   summary.innerHTML = `
     <div class="fee">${feeText}</div>
+    ${pkrNote ? `<p class="fee-note">${pkrNote}</p>` : ''}
     <dl class="facts" style="margin-top:16px">
       <div><dt>Starts</dt><dd>${first ? formatDate(first.start_date) : 'To be announced'}</dd></div>
       ${first?.schedule ? `<div><dt>Class days</dt><dd>${esc(first.schedule)}</dd></div>` : ''}
@@ -96,7 +99,7 @@ function render({ courses, batches, teachers, accounts, terms }) {
     wireWhatsapp(area);
     return;
   }
-  form(course, open, accounts, terms);
+  form(course, open, accounts, terms, content);
 }
 
 function plainBody(course, teacher) {
@@ -201,7 +204,8 @@ function structuredData(c, course, first, fee) {
     description: c.tagline,
     url: location.origin + coursePath(course),
     provider: { '@type': 'EducationalOrganization', name: 'KHS Elevate, Kulsoom Hassan School', sameAs: 'https://www.kulsoomhassanschool.com' },
-    ...(fee ? { offers: { '@type': 'Offer', price: fee, priceCurrency: 'PKR', category: 'Paid' } } : {}),
+    ...(c.priceUsd ? { offers: { '@type': 'Offer', price: c.priceUsd, priceCurrency: 'USD', category: 'Paid' } }
+      : fee ? { offers: { '@type': 'Offer', price: fee, priceCurrency: 'PKR', category: 'Paid' } } : {}),
     hasCourseInstance: first ? [{
       '@type': 'CourseInstance', courseMode: 'Online', startDate: first.start_date, ...(first.end_date ? { endDate: first.end_date } : {}),
       ...(c.instructor ? { instructor: { '@type': 'Person', name: c.instructor.name } } : {}),
@@ -213,7 +217,7 @@ function structuredData(c, course, first, fee) {
   document.head.appendChild(el);
 }
 
-function form(course, open, accounts, terms) {
+function form(course, open, accounts, terms, content) {
   const maxInst = Math.min(Math.max(Number(course.instalments_max) || 1, 1), 6);
   area.innerHTML = `
     <form id="reg" novalidate>
@@ -299,7 +303,7 @@ function form(course, open, accounts, terms) {
     document.getElementById('due-now').textContent = now ? pkr(now) : 'Contact the school';
     document.getElementById('due-note').textContent = !t ? '' : count() > 1
       ? `Course fee ${pkr(t)}, in ${count()} instalments. The rest is due monthly; the school sends reminders.`
-      : `Full course fee${quote ? ' after your coupon' : ''}.`;
+      : `Full course fee${quote ? ' after your coupon' : ''}${content?.priceUsd && !quote ? ` (${usd(content.priceUsd)})` : ''}. Transfer this amount in PKR to the account below.`;
     if (now && (!f.paid_amount.value || f.paid_amount.dataset.auto === '1')) {
       f.paid_amount.value = now;
       f.paid_amount.dataset.auto = '1';

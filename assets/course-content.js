@@ -1,11 +1,13 @@
 // Detailed course pages. The fee, intakes and registration come live from Kulsoom Hassan
 // School; the curriculum, outline download and instructor profile for each course live here.
 // Keyed by the course's id in KHS admin. `slug` gives the course a readable address:
-// /courses/<slug>.
+// /courses/<slug>. `priceUsd` is the price shown on the pages; the bank transfer is
+// still paid in PKR, at the fee set in KHS admin.
 
 export const COURSE_CONTENT = {
   'ea39b30d-bb9f-4ad5-bb42-9155be7bdf68': {
     slug: 'hospitality-tourism-digital-marketing',
+    priceUsd: 149,
     kicker: 'Practical executive course',
     title: '360-Degree Hospitality & Tourism Digital Marketing',
     tagline: 'Master direct bookings, high-converting content, metasearch and guest lifecycle retention in 4 weeks.',
