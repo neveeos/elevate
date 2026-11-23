@@ -1,5 +1,5 @@
-import { loadCatalog, nextBatch, courseFee, priceText, formatDate, esc, whatsapp, year } from './common.js';
-import { contentFor, coursePath } from './course-content.js';
+import { loadCatalog, nextBatch, courseFee, priceText, formatDate, esc, whatsapp, year } from './common.js?v=20261123b';
+import { contentFor, coursePath } from './course-content.js?v=20261123b';
 
 year();
 for (const a of document.querySelectorAll('[data-whatsapp]')) {
