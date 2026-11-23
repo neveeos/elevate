@@ -51,7 +51,7 @@ function render({ courses, batches, teachers, accounts, terms }) {
 
   const registerCta = open.length
     ? '<a class="button" href="#register">Register now</a>'
-    : `<a class="button" href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, please tell me when registration opens for ${esc(title)}.">Ask about the next intake</a>`;
+    : '<a class="button" href="#register">Show your interest</a>';
   const outlineLink = (cls) => content?.outline ? `<a class="button ${cls}" href="${esc(content.outline.href)}" download>Download course outline</a>` : '';
   const feeText = priceText(course, fee, content);
   // Payment goes to the school's Pakistani bank account, so say the PKR amount too.
@@ -95,10 +95,7 @@ function render({ courses, batches, teachers, accounts, terms }) {
   });
 
   if (!open.length) {
-    area.innerHTML = course.coming_soon
-      ? `<p class="muted">This course is coming soon. Message us and we will tell you first when the intake, timetable and fee are announced.</p><p><a class="button dark" href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, please tell me when the ${esc(course.title)} course opens.">Notify me on WhatsApp</a></p>`
-      : `<p class="muted">Registration for this course is not open yet.</p><p><a class="button dark" href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, please tell me when registration opens for ${esc(course.title)}.">Ask on WhatsApp</a></p>`;
-    wireWhatsapp(area);
+    interestForm(course, title);
     return;
   }
   form(course, open, accounts, terms, content);
@@ -395,6 +392,65 @@ function form(course, open, accounts, terms, content) {
 }
 
 /** The receipt as a data URL the school accepts: JPG or PNG, at most 2 MB (larger photos are resized). */
+// For courses that are coming soon or have no open intake: collect interest into the
+// school's enquiries, so staff can contact people when the intake opens.
+function interestForm(course, title) {
+  const soon = course.coming_soon;
+  const intro = document.querySelector('.register-intro');
+  if (intro) {
+    intro.innerHTML = `
+      <h2 id="register-title">Show your interest</h2>
+      <p>${soon ? `${esc(title)} is coming soon. ` : 'The next intake is not open yet. '}Leave your details and the school will contact you first with the start date, class times and fee.</p>
+      <p>There is nothing to pay now and no obligation to register.</p>
+      <p><a href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, I have a question about ${esc(title)}.">Questions? WhatsApp us</a></p>`;
+    wireWhatsapp(intro);
+  }
+  area.innerHTML = `
+    <form id="interest" class="interest" novalidate>
+      <div class="grid">
+        <label>Full name<input name="name" required maxlength="120" autocomplete="name"></label>
+        <label>Email<input name="email" type="email" required maxlength="160" autocomplete="email"></label>
+        <label>WhatsApp number<input name="phone" type="tel" required maxlength="40" autocomplete="tel" placeholder="+92 300 1234567"></label>
+        <label>City and country<input name="city" required maxlength="100" autocomplete="address-level2" placeholder="Lahore, Pakistan"></label>
+        <label class="wide">Anything you would like us to know? <small>optional</small><textarea name="note" rows="3" maxlength="1500" placeholder="Your experience, preferred class times or questions"></textarea></label>
+      </div>
+      <label class="check" style="margin-top:14px"><input type="checkbox" name="consent" required> Kulsoom Hassan School may contact me about this course by e-mail, phone or WhatsApp.</label>
+      <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
+      <button class="button" type="submit" style="margin-top:18px">Show my interest</button>
+      <p class="status" role="status"></p>
+      <p class="muted small">Prefer WhatsApp? <a href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, please tell me when the ${esc(title)} course opens.">Message us</a>.</p>
+    </form>`;
+  wireWhatsapp(area);
+  const f = document.getElementById('interest');
+  const status = f.querySelector('.status');
+  const requestId = crypto.randomUUID();
+  f.addEventListener('input', () => track('begin_interest', { course_id: course.id, course_name: title }), { once: true });
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!f.reportValidity()) return;
+    const button = f.querySelector('button[type=submit]');
+    button.disabled = true;
+    status.textContent = 'Sending…';
+    const note = f.note.value.trim();
+    const payload = {
+      kind: 'enquiry', enquiry_type: 'course', request_id: requestId, course_id: course.id,
+      name: f.name.value, email: f.email.value, phone: f.phone.value, city: f.city.value,
+      message: `Interested in ${title} (KHS Elevate${soon ? ', coming soon' : ''}).` + (note ? '\n\n' + note : ''),
+      consent: f.consent.checked, website: f.website.value, attribution: attribution(),
+    };
+    try {
+      const r = await fetch(API + '/api/submissions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'Your details could not be sent. Please try again or message us on WhatsApp.');
+      track('generate_lead', { event_id: 'enquiry:' + requestId, course_id: course.id, course_name: title });
+      f.innerHTML = `<h3>Thank you, we have your details.</h3><p class="muted">The school will contact you on WhatsApp or e-mail as soon as ${esc(title)} opens. Your reference is ${esc(data.reference || '')}.</p>`;
+    } catch (err) {
+      status.textContent = err.message;
+      button.disabled = false;
+    }
+  });
+}
+
 async function receiptData(file) {
   if (!file) throw new Error('Upload your payment receipt.');
   if (!/^image\/(png|jpeg)$/.test(file.type) && !/^image\//.test(file.type)) throw new Error('Upload the receipt as a JPG or PNG image.');
