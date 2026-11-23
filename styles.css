@@ -321,3 +321,6 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(253, 201, 38
   .contact-dock .dock-call { width: auto; }
   .contact-dock .dock-call span { position: static; width: auto; height: auto; clip: auto; }
 }
+
+/* Show your interest form */
+.interest h3 { margin: 0 0 8px; }

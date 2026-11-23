@@ -73,7 +73,7 @@ export function track(event, params = {}) {
 }
 
 // The same moments as standard Meta events, with value and currency where there is a price.
-const META_EVENTS = { view_course: 'ViewContent', begin_registration: 'InitiateCheckout', complete_registration: 'CompleteRegistration', contact: 'Contact' };
+const META_EVENTS = { view_course: 'ViewContent', begin_registration: 'InitiateCheckout', complete_registration: 'CompleteRegistration', generate_lead: 'Lead', contact: 'Contact' };
 function metaEvent(event, p) {
   const name = META_EVENTS[event];
   if (!name || typeof window.fbq !== 'function') return;
