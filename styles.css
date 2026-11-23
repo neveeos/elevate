@@ -324,3 +324,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(253, 201, 38
 
 /* Show your interest form */
 .interest h3 { margin: 0 0 8px; }
+
+/* Fee voucher after registering */
+.voucher-steps { margin: 12px 0 0; padding-left: 20px; display: grid; gap: 6px; }
+.voucher-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.voucher-facts { margin: 14px 0; }
