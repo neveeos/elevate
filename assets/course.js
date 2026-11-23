@@ -95,7 +95,9 @@ function render({ courses, batches, teachers, accounts, terms }) {
   });
 
   if (!open.length) {
-    area.innerHTML = `<p class="muted">Registration for this course is not open yet.</p><p><a class="button dark" href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, please tell me when registration opens for ${esc(course.title)}.">Ask on WhatsApp</a></p>`;
+    area.innerHTML = course.coming_soon
+      ? `<p class="muted">This course is coming soon. Message us and we will tell you first when the intake, timetable and fee are announced.</p><p><a class="button dark" href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, please tell me when the ${esc(course.title)} course opens.">Notify me on WhatsApp</a></p>`
+      : `<p class="muted">Registration for this course is not open yet.</p><p><a class="button dark" href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, please tell me when registration opens for ${esc(course.title)}.">Ask on WhatsApp</a></p>`;
     wireWhatsapp(area);
     return;
   }
