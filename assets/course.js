@@ -1,5 +1,5 @@
-import { API, loadCatalog, courseFee, instalmentSplit, pkr, usd, priceText, formatDate, esc, whatsapp, year, track, attribution } from './common.js';
-import { contentFor, courseIdForSlug, coursePath } from './course-content.js';
+import { API, loadCatalog, courseFee, instalmentSplit, pkr, usd, priceText, formatDate, esc, whatsapp, year, track, attribution } from './common.js?v=20261123b';
+import { contentFor, courseIdForSlug, coursePath } from './course-content.js?v=20261123b';
 
 year();
 function wireWhatsapp(root = document) {
