@@ -93,7 +93,7 @@ export const COURSE_CONTENT = {
       ['Do I need marketing experience?', 'No. The course suits hospitality staff new to digital marketing as well as marketers who want a hospitality focus. You work on your own property or a case brand.'],
       ['What if I miss a session?', 'Tell the school in advance. You can catch up with the session materials and bring questions to the next class.'],
       ['Will I get a certificate?', 'Yes, a certificate of completion from KHS Elevate, Kulsoom Hassan School, when you complete the course and capstone.'],
-      ['How do I pay?', 'By bank transfer to the school’s account shown in the registration form. Your seat is confirmed by e-mail once the payment is verified.'],
+      ['How do I pay?', 'After you register, we e-mail you a fee voucher. Pay it within 3 days by bank transfer or at a bank branch, then submit your receipt from the link in the e-mail. Your seat is confirmed once the payment is verified.'],
     ],
   },
   'a495c4af-0d40-43ff-af4f-bc86fbcad30a': {

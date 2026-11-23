@@ -255,26 +255,22 @@ function form(course, open, accounts, terms, content) {
       </fieldset>
 
       <fieldset>
-        <legend>3. Payment</legend>
+        <legend>3. Payment plan</legend>
         <div class="pay-box">
-          <div>Pay now: <span class="amount" id="due-now"></span></div>
+          <div>Your first fee voucher: <span class="amount" id="due-now"></span></div>
           <p class="muted" id="due-note"></p>
-          <div class="accounts">
-            ${accounts.map((a) => `<div class="account"><b>${esc(a.bank)}</b>${esc(a.account_title)}<br>Account: ${esc(a.account_number)}${a.iban ? `<br>IBAN: ${esc(a.iban)}` : ''}</div>`).join('')}
-          </div>
+          <ol class="voucher-steps">
+            <li>Complete this form. You do not pay anything yet.</li>
+            <li>We e-mail your fee voucher (PDF) straight away, with the amount, due date and the school’s bank details.</li>
+            <li>Pay it within 3 days by bank transfer, online banking or at a bank branch, using the voucher number as the reference.</li>
+            <li>Submit your payment and receipt from the link in the e-mail. Your seat is confirmed once the school verifies it.</li>
+          </ol>
         </div>
         <div class="coupon">
           <label>Coupon code <small>optional, enter your email above first</small><input name="coupon" maxlength="32" autocomplete="off"></label>
           <button class="button dark" type="button" id="apply">Apply</button>
         </div>
         <p class="status" id="coupon-status" role="status"></p>
-        <div class="grid" style="margin-top:12px">
-          <label>Name on the bank transfer<input name="payer_name" required maxlength="120"></label>
-          <label>Transaction reference / ID<input name="transaction_reference" required maxlength="120"></label>
-          <label>Date of payment<input name="payment_date" type="date" required max="${todayPk()}" value="${todayPk()}"></label>
-          <label>Amount you transferred (PKR)<input name="paid_amount" type="number" min="1" step="1" required></label>
-          <label class="wide">Payment receipt <small>photo or screenshot, JPG or PNG</small><input name="receipt" type="file" accept="image/jpeg,image/png" required></label>
-        </div>
       </fieldset>
 
       <fieldset>
@@ -301,14 +297,9 @@ function form(course, open, accounts, terms, content) {
     const now = t ? instalmentSplit(t, count())[0] : null;
     document.getElementById('due-now').textContent = now ? pkr(now) : 'Contact the school';
     document.getElementById('due-note').textContent = !t ? '' : count() > 1
-      ? `Course fee ${pkr(t)}, in ${count()} instalments. The rest is due monthly; the school sends reminders.`
-      : `Full course fee${quote ? ' after your coupon' : ''}${content?.priceUsd && !quote ? ` (${usd(content.priceUsd)})` : ''}. Transfer this amount in PKR to the account below.`;
-    if (now && (!f.paid_amount.value || f.paid_amount.dataset.auto === '1')) {
-      f.paid_amount.value = now;
-      f.paid_amount.dataset.auto = '1';
-    }
+      ? `Course fee ${pkr(t)}, in ${count()} instalments. Each later instalment gets its own voucher 5 days before it is due.`
+      : `Full course fee${quote ? ' after your coupon' : ''}${content?.priceUsd && !quote ? ` (${usd(content.priceUsd)})` : ''}, paid in PKR.`;
   }
-  f.paid_amount.addEventListener('input', () => { f.paid_amount.dataset.auto = '0'; });
   f.batch_id.addEventListener('change', () => { quote = null; update(); });
   f.instalment_count?.addEventListener('change', update);
   update();
@@ -327,8 +318,7 @@ function form(course, open, accounts, terms, content) {
       if (!r.ok) throw new Error(data.error || 'The coupon could not be applied.');
       quote = data.quote;
       out.className = 'status ok';
-      out.textContent = `Coupon applied: ${quote.discount_percent}% off. Submit before ${new Date(quote.expires_at).toLocaleString('en-GB', { timeZone: 'Asia/Karachi' })} PKT.`;
-      f.paid_amount.dataset.auto = '1';
+      out.textContent = `Coupon applied: ${quote.discount_percent}% off. Register before ${new Date(quote.expires_at).toLocaleString('en-GB', { timeZone: 'Asia/Karachi' })} PKT to keep it.`;
       update();
     } catch (e) {
       quote = null;
@@ -352,10 +342,8 @@ function form(course, open, accounts, terms, content) {
       return;
     }
     button.disabled = true;
-    status.textContent = 'Preparing your receipt…';
+    status.textContent = 'Sending your registration…';
     try {
-      const receipt = await receiptData(f.receipt.files[0]);
-      status.textContent = 'Sending your registration…';
       const v = (k) => (f[k] ? f[k].value : '');
       const payload = {
         kind: 'registration', request_id: requestId, consent: f.consent.checked, website: v('website'),
@@ -364,21 +352,32 @@ function form(course, open, accounts, terms, content) {
         nationality: v('nationality'), country_of_residence: v('country_of_residence'), address: v('address'),
         emergency_phone: v('emergency_phone'), current_level: v('current_level'), previous_institute: '', learning_reason: v('learning_reason'),
         terms_accepted: f.terms_accepted.checked, terms_version: terms.version,
-        payer_name: v('payer_name'), transaction_reference: v('transaction_reference'), payment_date: v('payment_date'),
-        paid_amount: Number(v('paid_amount')), expected_amount: t, instalment_count: count(),
+        pays_by_voucher: true, expected_amount: t, instalment_count: count(),
         coupon_quote_id: quote && quote.batch_id === v('batch_id') ? quote.id : null,
-        receipt, attribution: attribution(),
+        attribution: attribution(),
       };
       const r = await fetch(API + '/api/registration', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.error || 'Your registration could not be sent. Keep your receipt and try again, or contact us on WhatsApp.');
+      if (!r.ok) throw new Error(data.error || 'Your registration could not be sent. Please try again, or contact us on WhatsApp.');
       const ref = String(data.reference || requestId).slice(0, 8).toUpperCase();
       // event_id matches the server-side Meta event, so Meta counts the registration once.
       track('complete_registration', { event_id: 'registration:' + data.reference, course_id: course.id, course_name: course.title, value: t, currency: 'PKR' });
+      const vch = data.voucher;
       area.innerHTML = `<div class="done" role="status">
-        <h3>Registration received</h3>
-        <p>Thank you. Your reference is <strong>${esc(ref)}</strong>. We have e-mailed a copy to ${esc(payload.email)}.</p>
-        <p>Kulsoom Hassan School will verify your payment and e-mail your confirmation and class link. You do not need to pay again.</p>
+        <h3>You are registered. Now pay your fee voucher.</h3>
+        <p>Thank you. We have e-mailed your fee voucher to ${esc(payload.email)}. Pay it by the due date to keep your seat, then submit your payment.</p>
+        ${vch ? `<dl class="facts voucher-facts">
+          <div><dt>Voucher no.</dt><dd><strong>${esc(vch.number)}</strong></dd></div>
+          <div><dt>Amount to pay</dt><dd><strong>${esc(pkr(vch.amount))}</strong></dd></div>
+          <div><dt>Pay by</dt><dd><strong>${esc(formatDate(vch.due_date))}</strong></dd></div>
+          <div><dt>Payment reference</dt><dd>${esc(vch.number)}</dd></div>
+        </dl>
+        <p class="voucher-actions">
+          <a class="button dark" href="${esc(API + vch.pdf_url)}">Download fee voucher (PDF)</a>
+          <a class="button" href="${esc(vch.pay_url)}">I have paid: submit payment</a>
+        </p>
+        <p class="muted small">If the voucher is not paid by ${esc(formatDate(vch.due_date))}, it expires and the seat is released. Registration reference: ${esc(ref)}.</p>`
+        : `<p>Your fee voucher is on its way by e-mail. Your reference is <strong>${esc(ref)}</strong>.</p>`}
         <p><a href="#" data-whatsapp="Assalam o Alaikum KHS Elevate, my registration reference is ${esc(ref)}.">Questions? WhatsApp us with your reference</a></p>
       </div>`;
       wireWhatsapp(area);
@@ -391,7 +390,6 @@ function form(course, open, accounts, terms, content) {
   });
 }
 
-/** The receipt as a data URL the school accepts: JPG or PNG, at most 2 MB (larger photos are resized). */
 // For courses that are coming soon or have no open intake: collect interest into the
 // school's enquiries, so staff can contact people when the intake opens.
 function interestForm(course, title) {
@@ -450,40 +448,6 @@ function interestForm(course, title) {
     }
   });
 }
-
-async function receiptData(file) {
-  if (!file) throw new Error('Upload your payment receipt.');
-  if (!/^image\/(png|jpeg)$/.test(file.type) && !/^image\//.test(file.type)) throw new Error('Upload the receipt as a JPG or PNG image.');
-  const read = (blob) => new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.onerror = () => reject(new Error('The receipt could not be read.'));
-    r.readAsDataURL(blob);
-  });
-  if (/^image\/(png|jpeg)$/.test(file.type) && file.size <= 1_900_000) return read(file);
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise((resolve, reject) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = () => reject(new Error('Upload the receipt as a JPG or PNG image.'));
-      i.src = url;
-    });
-    const scale = Math.min(1, 1800 / Math.max(img.width, img.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
-    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-    for (const q of [0.85, 0.7, 0.55]) {
-      const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', q));
-      if (blob && blob.size <= 1_900_000) return read(blob);
-    }
-    throw new Error('The receipt image is too large. Take a screenshot instead.');
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
 
 loadCatalog().then(render).catch(() => {
   head.innerHTML = '<h1>The course could not be loaded.</h1><p class="subtitle">Please refresh the page, or contact us on WhatsApp.</p>';
